@@ -21,16 +21,27 @@ from sklearn import preprocessing
 import time
 
 import Print
+from Load_ECCO import decode_llc, decode_llc_grid, transp_tiles
 
 start_time = time.perf_counter()
 
 def main(address, filename_raw_data, runIndex, subsample_uniform, subsample_random,\
          subsample_inTime, grid, conc, fraction_train, inTime_start, inTime_finish,\
-         fraction_nan_samples, fraction_nan_depths, cov_type, run_bic=False):
+         fraction_nan_samples, fraction_nan_depths, cov_type, run_bic=False,\
+         use_ecco_data=False, ecco_files=None):
     print("Starting Load.main")
     """ Main function for module"""
-    lon, lat, dynHeight, Tint, Sint, varTime = \
-        load(filename_raw_data)
+    if use_ecco_data:
+        if ecco_files is None:
+            ecco_files = {
+                'data_file': 'DIC.0000002232.data',
+                'xc_file': 'XC.data',
+                'yc_file': 'YC.data',
+                'rc_file': 'RC.data'
+            }
+        lon, lat, dynHeight, Tint, Sint, varTime = load_ecco(**ecco_files)
+    else:
+        lon, lat, dynHeight, Tint, Sint, varTime = load(filename_raw_data)
     print("Removing depths with high NaN counts")
     Tint, Sint, depth = \
         removeDepthFractionNan(Tint, Sint, fraction_nan_depths)
@@ -122,11 +133,39 @@ def load(filename_raw_data):
     Sint = np.array(Sint)
     varTime = mat["dectime"]
     varTime = np.array(varTime)
-    
+
 #   print("Shape of variable = ", Tint.shape)
 #    print("axis 0 = ", np.ma.size(Tint, axis=0)) # axis 0 should be ~290520
 #    print("axis 1 = ", np.ma.size(Tint, axis=1)) # axis 1 should be ~400
-    
+
+    return lon, lat, dynHeight, Tint, Sint, varTime
+
+
+def load_ecco(data_file, xc_file, yc_file, rc_file):
+    """Load ECCO DIC model output and return arrays in the same format as ``load``."""
+    num_variables = 15
+    data_raw = decode_llc(data_file, num_variables)
+    data_dic = data_raw[0]
+    for ind in range(data_dic.shape[0]):
+        data_dic[ind] = transp_tiles(data_dic[ind])
+    data_dic[data_dic == 0] = np.nan
+
+    xc = decode_llc_grid(xc_file, 2)
+    xc = transp_tiles(xc)
+    yc = decode_llc_grid(yc_file, 2)
+    yc = transp_tiles(yc)
+    z = decode_llc_grid(rc_file, 1)
+
+    n_depths = data_dic.shape[0]
+    n_profiles = xc.size
+
+    Tint = data_dic.reshape(n_depths, n_profiles).T
+    Sint = np.full_like(Tint, np.nan)
+    lon = xc.flatten()
+    lat = yc.flatten()
+    dynHeight = np.full(n_profiles, np.nan)
+    varTime = np.arange(n_profiles)
+
     return lon, lat, dynHeight, Tint, Sint, varTime
 
 def removeDepthFractionNan(VAR, VAR2, fraction_of):
