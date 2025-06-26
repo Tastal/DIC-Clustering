@@ -57,6 +57,9 @@ use_fPCA = False
 # plot ACC fronts 
 plotFronts = True
 
+# use ECCO model data instead of Argo profiles
+use_ecco_data = True
+
 # set parameters
 n_comp = 8           # number of classes in GMM object
 n_dimen = 0.999      # amount of variance retained in PCA
@@ -125,7 +128,7 @@ def main(runIndex=None):
               subsample_random, subsample_inTime, grid, conc, \
               fraction_train, inTime_start, inTime_finish,\
               fraction_nan_samples, fraction_nan_depths, cov_type,\
-              run_bic=False)
+              run_bic=False, use_ecco_data=use_ecco_data)
 
     # loads data, selects train, cleans, centres/standardises, prints
     PCA.create(address, runIndex, n_dimen, use_fPCA)     
