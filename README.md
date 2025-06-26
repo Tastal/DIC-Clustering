@@ -49,3 +49,7 @@ Address
 - Objects
 - Plots
 - Results
+
+## ECCO model support
+
+This repository now includes `Load_ECCO.py` and a `load_ecco()` function in `Load.py` for reading ECCO DIC model output. The pipeline can be switched to use these files by setting `use_ecco_data = True` in `Main.py`.
